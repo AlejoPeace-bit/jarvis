@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Jarvis</title>
+  <meta name="description" content="Asistente personal por voz" />
+  <meta name="theme-color" content="#0b0f14" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Jarvis" />
+  <link rel="manifest" href="/manifest.webmanifest" />
+  <link rel="icon" href="/icons/icon-192.png" />
+  <link rel="apple-touch-icon" href="/icons/icon-192.png" />
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <header class="top">
+    <div class="brand">
+      <div class="orb" id="orb" aria-hidden="true"><span></span><span></span><span></span></div>
+      <div>
+        <h1 id="brandName">JARVIS</h1>
+        <p class="status" id="status">Iniciando…</p>
+      </div>
+    </div>
+    <div class="top-actions">
+      <button class="icon-btn" id="btnHandsFree" title="Modo manos libres" aria-pressed="false">
+        <svg viewBox="0 0 24 24"><path d="M12 3a9 9 0 0 0-9 9v5a3 3 0 0 0 3 3h2v-8H5v-1a7 7 0 0 1 14 0v1h-3v8h2a3 3 0 0 0 3-3v-5a9 9 0 0 0-9-9z"/></svg>
+      </button>
+      <button class="icon-btn" id="btnSettings" title="Ajustes">
+        <svg viewBox="0 0 24 24"><path d="M19.4 13a7.6 7.6 0 0 0 0-2l2.1-1.6-2-3.5-2.5 1a7.6 7.6 0 0 0-1.7-1L15 3H9l-.4 2.9a7.6 7.6 0 0 0-1.7 1l-2.5-1-2 3.5L4.6 11a7.6 7.6 0 0 0 0 2l-2.1 1.6 2 3.5 2.5-1a7.6 7.6 0 0 0 1.7 1L9 21h6l.4-2.9a7.6 7.6 0 0 0 1.7-1l2.5 1 2-3.5zM12 15.5A3.5 3.5 0 1 1 12 8.5a3.5 3.5 0 0 1 0 7z"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <main class="chat" id="chat" aria-live="polite"></main>
+
+  <footer class="composer">
+    <div class="chips" id="chips"></div>
+    <form id="form" autocomplete="off">
+      <input id="input" type="text" placeholder="Escribe o toca el micrófono…" enterkeyhint="send" />
+      <button type="button" class="mic" id="btnMic" title="Hablar" aria-pressed="false">
+        <svg viewBox="0 0 24 24"><path d="M12 15a4 4 0 0 0 4-4V6a4 4 0 0 0-8 0v5a4 4 0 0 0 4 4zm6-4a6 6 0 0 1-12 0H4a8 8 0 0 0 7 7.9V22h2v-3.1A8 8 0 0 0 20 11z"/></svg>
+      </button>
+      <button type="submit" class="send" id="btnSend" title="Enviar">
+        <svg viewBox="0 0 24 24"><path d="M3 20v-6l9-2-9-2V4l19 8z"/></svg>
+      </button>
+    </form>
+  </footer>
+
+  <dialog id="settings">
+    <form method="dialog" class="settings-form">
+      <h2>Ajustes</h2>
+      <label>Clave de acceso
+        <input type="password" id="setKey" placeholder="JARVIS_PASSWORD del servidor" />
+      </label>
+      <label class="row"><input type="checkbox" id="setVoice" checked /> Responder con voz</label>
+      <label>Voz
+        <select id="setVoiceName"></select>
+      </label>
+      <label>Velocidad <span id="rateLabel">1.0</span>
+        <input type="range" id="setRate" min="0.7" max="1.4" step="0.05" value="1" />
+      </label>
+      <label class="row"><input type="checkbox" id="setAutoListen" /> Manos libres: volver a escuchar al terminar de hablar</label>
+      <div class="settings-actions">
+        <button type="button" id="btnReset" class="ghost">Nueva conversación</button>
+        <button type="submit" id="btnSaveSettings">Guardar</button>
+      </div>
+      <p class="hint" id="healthInfo"></p>
+    </form>
+  </dialog>
+
+  <script src="/app.js"></script>
+</body>
+</html>
