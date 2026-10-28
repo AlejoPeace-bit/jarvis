@@ -7,6 +7,7 @@ import { runAgent } from "./agent.js";
 import { sessionStore } from "./memory.js";
 import { buildToolset } from "./tools/index.js";
 import * as googleAuth from "./google.js";
+import { sttAvailable, transcribe } from "./stt.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PUBLIC_DIR = path.join(__dirname, "..", "public");
@@ -55,9 +56,29 @@ app.get("/api/health", requireAuth, (req, res) => {
     google: { configurado: googleAuth.isConfigured(), conectado: googleAuth.isConnected() },
     n8n: toolset.status.n8n,
     homeAssistant: toolset.status.homeAssistant,
+    voz: sttAvailable(),
     herramientas: toolset.names,
   });
 });
+
+// Voz a texto: el navegador manda el audio grabado (webm/ogg/mp4) como cuerpo crudo
+app.post(
+  "/api/transcribe",
+  requireAuth,
+  rateLimit,
+  express.raw({ type: ["audio/*", "application/octet-stream"], limit: "15mb" }),
+  async (req, res) => {
+    if (!sttAvailable()) return res.status(503).json({ error: "La voz del servidor no está configurada." });
+    if (!req.body || !req.body.length) return res.status(400).json({ error: "No llegó audio." });
+    try {
+      const text = await transcribe(req.body, req.get("content-type") || "audio/webm");
+      res.json({ text });
+    } catch (err) {
+      console.error("Error en /api/transcribe:", err.message);
+      res.status(500).json({ error: err.message });
+    }
+  },
+);
 
 app.post("/api/chat", requireAuth, rateLimit, async (req, res) => {
   const { message, sessionId } = req.body || {};

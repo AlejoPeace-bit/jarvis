@@ -98,13 +98,16 @@
     try {
       const h = await api("/api/health");
       assistantName = h.nombre || "Jarvis";
+      serverVoice = Boolean(h.voz);
+      updateMicAvailability();
       $("brandName").textContent = assistantName.toUpperCase();
       document.title = assistantName;
       const chip = (label, on, offLabel) => `<span class="${on ? "on" : "off"}">${on ? label : offLabel || label}</span>`;
       chips.innerHTML =
         chip("Google conectado", h.google?.conectado, h.google?.configurado ? "Google: falta autorizar" : "Google no configurado") +
         chip("n8n", h.n8n, "n8n sin flujos") +
-        chip("Casa conectada", h.homeAssistant, "Casa pendiente");
+        chip("Casa conectada", h.homeAssistant, "Casa pendiente") +
+        chip("Voz del servidor", h.voz, "Voz del navegador");
       $("healthInfo").textContent = `Modelo: ${h.modelo}. Herramientas: ${h.herramientas.join(", ")}.`;
       setState("", "Listo");
       if (!chat.children.length) showWelcome();
@@ -194,12 +197,120 @@
   }
 
   // ---------- Voz: reconocimiento ----------
+  // Dos motores: (1) grabar y transcribir en el servidor con Whisper (preferido: funciona en iPhone,
+  // app instalada y Fully Kiosk), (2) reconocimiento del navegador como respaldo.
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  const canRecord = Boolean(navigator.mediaDevices?.getUserMedia && window.MediaRecorder);
+  let serverVoice = false; // lo activa checkHealth si el servidor tiene Whisper configurado
   let rec = null, listening = false, interimEl = null;
-  if (!SR) {
-    btnMic.hidden = true;
-    btnHandsFree.hidden = true;
-  } else {
+
+  function updateMicAvailability() {
+    const available = (serverVoice && canRecord) || Boolean(rec);
+    btnMic.hidden = !available;
+    btnHandsFree.hidden = !available;
+  }
+
+  // --- Motor 1: grabación + Whisper en el servidor ---
+  let mediaStream = null, recorder = null, chunks = [], audioCtx = null, vadTimer = null, discardRecording = false;
+
+  function pickMime() {
+    const options = ["audio/webm;codecs=opus", "audio/webm", "audio/mp4", "audio/ogg;codecs=opus"];
+    return options.find((m) => window.MediaRecorder.isTypeSupported?.(m)) || "";
+  }
+
+  function releaseMic() {
+    clearInterval(vadTimer); vadTimer = null;
+    mediaStream?.getTracks().forEach((t) => t.stop());
+    mediaStream = null;
+  }
+
+  async function startRecording() {
+    try {
+      if (!mediaStream) mediaStream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true } });
+    } catch (err) {
+      addMsg("Necesito permiso del micrófono. Actívalo en los ajustes del navegador para hablar conmigo.", "bot", { error: true });
+      return;
+    }
+    const mime = pickMime();
+    recorder = new MediaRecorder(mediaStream, mime ? { mimeType: mime } : undefined);
+    chunks = [];
+    discardRecording = false;
+    recorder.ondataavailable = (e) => { if (e.data?.size) chunks.push(e.data); };
+    recorder.onstop = onRecordingStop;
+    recorder.start(250);
+    listening = true;
+    btnMic.setAttribute("aria-pressed", "true");
+    setState("listening", "Escuchando… toca de nuevo para enviar");
+    startVad();
+  }
+
+  // Detecta cuando terminas de hablar: tras haber voz, 1,3 s de silencio cierra la grabación.
+  function startVad() {
+    const started = Date.now();
+    let heardVoice = false, lastVoice = Date.now();
+    let analyser = null, data = null;
+    try {
+      audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
+      audioCtx.resume?.();
+      const src = audioCtx.createMediaStreamSource(mediaStream);
+      analyser = audioCtx.createAnalyser();
+      analyser.fftSize = 1024;
+      src.connect(analyser);
+      data = new Uint8Array(analyser.fftSize);
+    } catch { analyser = null; }
+
+    clearInterval(vadTimer);
+    vadTimer = setInterval(() => {
+      const now = Date.now();
+      if (analyser) {
+        analyser.getByteTimeDomainData(data);
+        let sum = 0;
+        for (let i = 0; i < data.length; i++) { const v = (data[i] - 128) / 128; sum += v * v; }
+        const rms = Math.sqrt(sum / data.length);
+        if (rms > 0.025) { heardVoice = true; lastVoice = now; }
+        if (heardVoice && now - lastVoice > 1300) return stopRecording();
+        if (!heardVoice && now - started > 8000) { discardRecording = true; return stopRecording(); }
+      } else if (now - started > 10000) {
+        return stopRecording(); // sin medidor de volumen: corta a los 10 s
+      }
+      if (now - started > 45000) stopRecording();
+    }, 100);
+  }
+
+  function stopRecording() {
+    clearInterval(vadTimer); vadTimer = null;
+    if (recorder && recorder.state !== "inactive") recorder.stop();
+  }
+
+  async function onRecordingStop() {
+    listening = false;
+    btnMic.setAttribute("aria-pressed", "false");
+    if (!store.handsFree) releaseMic();
+    const type = recorder?.mimeType || chunks[0]?.type || "audio/webm";
+    const blob = new Blob(chunks, { type });
+    chunks = [];
+    if (discardRecording || blob.size < 1500) { setState("", "Listo"); return; }
+    setState("thinking", "Transcribiendo…");
+    try {
+      const res = await fetch("/api/transcribe", {
+        method: "POST",
+        headers: { "Content-Type": type.split(";")[0], Authorization: "Bearer " + store.key },
+        body: blob,
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || `Error ${res.status}`);
+      const text = (data.text || "").trim();
+      if (!text) { setState("", "No te escuché, intenta de nuevo"); maybeAutoListen(); return; }
+      send(text);
+    } catch (err) {
+      addMsg("No pude transcribir el audio: " + err.message, "bot", { error: true });
+      setState("error", "Error");
+      setTimeout(() => setState("", "Listo"), 2500);
+    }
+  }
+
+  // --- Motor 2: reconocimiento del navegador (respaldo) ---
+  if (SR) {
     rec = new SR();
     rec.lang = "es-CO";
     rec.interimResults = true;
@@ -230,14 +341,23 @@
       interimEl?.remove(); interimEl = null;
     };
   }
+  updateMicAvailability();
+
+  function useServerVoice() { return serverVoice && canRecord; }
   function startListening() {
-    if (!rec || listening || busy) return;
+    if (listening || busy) return;
     synth?.cancel();
+    if (useServerVoice()) { startRecording(); return; }
+    if (!rec) return;
     try { rec.start(); } catch { /* ya estaba iniciado */ }
   }
-  function stopListening() { if (rec && listening) { try { rec.stop(); } catch {} } }
+  function stopListening() {
+    if (!listening) return;
+    if (recorder && recorder.state !== "inactive") { stopRecording(); return; }
+    if (rec) { try { rec.stop(); } catch {} }
+  }
   function maybeAutoListen() {
-    if (store.handsFree && rec && document.visibilityState === "visible") setTimeout(startListening, 350);
+    if (store.handsFree && (useServerVoice() || rec) && document.visibilityState === "visible") setTimeout(startListening, 350);
   }
 
   // ---------- Eventos ----------
@@ -273,7 +393,9 @@
     showWelcome();
     dlg.close();
   });
-  document.addEventListener("visibilitychange", () => { if (document.hidden) { stopListening(); synth?.cancel(); } });
+  document.addEventListener("visibilitychange", () => {
+    if (document.hidden) { discardRecording = true; stopListening(); releaseMic(); synth?.cancel(); }
+  });
 
   // Atajo: barra espaciadora mantenida (en escritorio) para hablar
   document.addEventListener("keydown", (e) => {

@@ -48,7 +48,7 @@ Pruébalo: *"¿Qué tengo mañana?"*, *"Agéndame visita de obra el martes a las
 
 ## Voz
 
-- **Micrófono**: usa el reconocimiento del navegador (Chrome, Edge y Safari). Toca el micrófono, habla y se envía solo al terminar.
+- **Micrófono**: si el servidor tiene `GROQ_API_KEY` (gratis en console.groq.com) u `OPENAI_API_KEY`, la app graba tu voz y la transcribe con Whisper en el servidor: funciona en iPhone, en la app instalada y en Fully Kiosk. Toca el micrófono, habla, y se envía solo cuando haces una pausa (o toca otra vez para enviar). Sin esa clave usa el reconocimiento del navegador.
 - **Manos libres** (icono de audífonos): al terminar de responder vuelve a escuchar. Ideal con el celular en un soporte o una tablet en la pared.
 - **Voz de respuesta**: en Ajustes puedes elegir la voz del sistema (las "Google español" en Android y las "Mónica/Paulina/Jorge" en Apple suenan bien) y la velocidad.
 - En escritorio, mantén presionada la **barra espaciadora** para hablar.

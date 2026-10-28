@@ -53,6 +53,14 @@ export const config = {
   // n8n: flujos disponibles como herramientas (JSON en variable o archivo DATA_DIR/flujos.json)
   n8nFlowsJson: env.N8N_FLOWS || "",
 
+  // Voz a texto en el servidor (Whisper): Groq (gratis) u OpenAI
+  stt: {
+    provider: (env.STT_PROVIDER || "groq").toLowerCase(),
+    groqKey: env.GROQ_API_KEY || "",
+    openaiKey: env.OPENAI_API_KEY || "",
+    model: env.STT_MODEL || "",
+  },
+
   // Home Assistant
   homeAssistant: {
     url: (env.HA_URL || "").replace(/\/$/, ""),
