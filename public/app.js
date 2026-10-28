@@ -155,6 +155,20 @@
   }
   if (synth) { loadVoices(); synth.onvoiceschanged = loadVoices; }
 
+  // iPhone/iPad: Safari solo permite hablar si la voz se "desbloquea" durante un toque del usuario.
+  // Se llama en cada toque (micrófono, enviar, sugerencias); la respuesta llega después y ya puede sonar.
+  let speechUnlocked = false;
+  function unlockSpeech() {
+    if (!synth || speechUnlocked) return;
+    try {
+      const u = new SpeechSynthesisUtterance(" ");
+      u.volume = 0;
+      u.lang = "es-CO";
+      synth.speak(u);
+      speechUnlocked = true;
+    } catch { /* sin voz disponible */ }
+  }
+
   function pickVoice() {
     if (!voices.length) voices = synth.getVoices();
     if (store.voiceName) { const v = voices.find((x) => x.name === store.voiceName); if (v) return v; }
@@ -346,7 +360,7 @@
   function useServerVoice() { return serverVoice && canRecord; }
   function startListening() {
     if (listening || busy) return;
-    synth?.cancel();
+    if (synth?.speaking) synth.cancel();
     if (useServerVoice()) { startRecording(); return; }
     if (!rec) return;
     try { rec.start(); } catch { /* ya estaba iniciado */ }
@@ -361,8 +375,10 @@
   }
 
   // ---------- Eventos ----------
-  form.addEventListener("submit", (e) => { e.preventDefault(); send(input.value); });
-  btnMic.addEventListener("click", () => (listening ? stopListening() : startListening()));
+  form.addEventListener("submit", (e) => { e.preventDefault(); unlockSpeech(); send(input.value); });
+  btnMic.addEventListener("click", () => { unlockSpeech(); listening ? stopListening() : startListening(); });
+  chat.addEventListener("click", unlockSpeech); // sugerencias de bienvenida
+  document.addEventListener("touchend", unlockSpeech, { once: true });
   btnHandsFree.addEventListener("click", () => {
     store.handsFree = !store.handsFree;
     btnHandsFree.setAttribute("aria-pressed", String(store.handsFree));
