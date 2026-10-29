@@ -61,6 +61,9 @@ export const config = {
     model: env.STT_MODEL || "",
   },
 
+  // YouTube (búsqueda de videos): clave gratis de la YouTube Data API v3
+  youtubeKey: env.YOUTUBE_API_KEY || "",
+
   // Home Assistant
   homeAssistant: {
     url: (env.HA_URL || "").replace(/\/$/, ""),

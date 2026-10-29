@@ -56,6 +56,7 @@ app.get("/api/health", requireAuth, (req, res) => {
     google: { configurado: googleAuth.isConfigured(), conectado: googleAuth.isConnected() },
     n8n: toolset.status.n8n,
     homeAssistant: toolset.status.homeAssistant,
+    youtube: toolset.status.youtube,
     voz: sttAvailable(),
     herramientas: toolset.names,
   });

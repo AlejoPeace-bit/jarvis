@@ -27,6 +27,9 @@ const ACTION_LABELS = {
   recordar: "Guardado en memoria",
   olvidar: "Memoria actualizada",
   hora_actual: "Hora consultada",
+  poner_video: "Video",
+  poner_podcast: "Podcast",
+  controlar_reproductor: "Reproductor",
 };
 
 function textOf(content) {
@@ -49,6 +52,7 @@ export async function runAgent({ sessionId, message }, deps = {}) {
   const history = sessionStore.get(sessionId);
   const messages = [...history, { role: "user", content: message }];
   const actions = [];
+  let media = null; // último video/audio/control pedido: lo ejecuta la app
   let finalText = "";
 
   for (let i = 0; i < MAX_ITERATIONS; i++) {
@@ -71,7 +75,8 @@ export async function runAgent({ sessionId, message }, deps = {}) {
     const results = await Promise.all(
       toolUses.map(async (tu) => {
         const started = Date.now();
-        const { content, isError } = await toolset.execute(tu.name, tu.input);
+        const { content, isError, media: m } = await toolset.execute(tu.name, tu.input);
+        if (m) media = m;
         actions.push({
           tool: tu.name,
           label: ACTION_LABELS[tu.name] || tu.name,
@@ -96,5 +101,5 @@ export async function runAgent({ sessionId, message }, deps = {}) {
   }
   sessionStore.set(sessionId, messages);
 
-  return { reply: finalText, actions };
+  return { reply: finalText, actions, media };
 }

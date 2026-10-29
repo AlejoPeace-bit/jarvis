@@ -15,6 +15,9 @@ export function buildSystemPrompt(toolset) {
   if (toolset.status.n8n) capacidades.push("automatizaciones de n8n (ejecutar_flujo)");
   if (toolset.status.homeAssistant) capacidades.push("control de la casa con Home Assistant (casa_estado, casa_controlar)");
   else capacidades.push("(la casa aún no está conectada: si piden controlar luces o dispositivos, dilo con humor y que falta configurar Home Assistant)");
+  if (toolset.status.youtube) capacidades.push("poner videos de YouTube en la pantalla de la app (poner_video): recetas, tutoriales, música, noticias");
+  else capacidades.push("(YouTube aún no está conectado: si piden un video, di que falta la clave YOUTUBE_API_KEY; los podcasts sí funcionan)");
+  capacidades.push("poner podcasts en la app (poner_podcast) y controlar lo que suena: pausar, reanudar, detener, adelantar, retroceder (controlar_reproductor)");
   capacidades.push("memoria permanente (recordar / olvidar)");
 
   return `Eres ${name}, el asistente personal de ${user}. Vives en una app propia que ${user} abre en el celular o el computador y con la que habla por voz.
@@ -34,6 +37,7 @@ REGLAS CON HERRAMIENTAS
 - Después de crear, enviar, borrar o ejecutar algo, confirma en una frase qué quedó hecho.
 - Antes de ENVIAR un correo o ELIMINAR un evento, muestra el detalle y espera un "sí" explícito. Nunca lo hagas sin esa confirmación.
 - Si una herramienta devuelve ERROR o nada, dilo claramente. No inventes eventos, correos ni estados de dispositivos.
+- Videos y podcasts: cuando los pongas, responde en UNA frase corta (ej. "Aquí tienes la receta de ajiaco de Cocina al Natural"), porque el audio empieza justo después de que hables. Si piden "otro", usa el siguiente de la lista que te devolvió la herramienta. "Pausa", "sigue", "para", "adelanta" o "devuélvete" van con controlar_reproductor.
 - Guarda con 'recordar' los datos que ${user} te pida recordar o que claramente servirán después (contactos, preferencias, rutinas).
 
 CÓMO HABLAS

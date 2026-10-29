@@ -109,3 +109,40 @@ test("extractBody: prefiere texto plano, limpia HTML y lista adjuntos", () => {
   assert.equal(r2.body, "Texto plano ✔");
   assert.deepEqual(r2.attachments, ["planos.pdf"]);
 });
+
+test("podcasts: lee episodios de un feed RSS", async () => {
+  const { parseFeed } = await import("../server/tools/media.js");
+  const xml = `<rss><channel><title>Show</title>
+    <item><title><![CDATA[Episodio 2: Finanzas &amp; obra]]></title><pubDate>Mon, 26 Oct 2026 10:00:00 GMT</pubDate>
+      <enclosure url="https://cdn.example.com/ep2.mp3?a=1&amp;b=2" type="audio/mpeg"/></item>
+    <item><title>Sin audio</title></item>
+    <item><title>Episodio 1</title><enclosure url='https://cdn.example.com/ep1.mp3'/></item>
+  </channel></rss>`;
+  const eps = parseFeed(xml);
+  assert.equal(eps.length, 2);
+  assert.equal(eps[0].titulo, "Episodio 2: Finanzas & obra");
+  assert.equal(eps[0].url, "https://cdn.example.com/ep2.mp3?a=1&b=2");
+  assert.equal(eps[1].url, "https://cdn.example.com/ep1.mp3");
+});
+
+test("medios: la herramienta pasa el video a la app y el texto a Claude", async () => {
+  const { buildToolset } = await import("../server/tools/index.js");
+  const toolset = buildToolset();
+  assert.ok(toolset.names.includes("poner_podcast"));
+  assert.ok(toolset.names.includes("controlar_reproductor"));
+  const r = await toolset.execute("controlar_reproductor", { accion: "pausar" });
+  assert.equal(r.isError, false);
+  assert.match(r.content, /pausar/);
+  assert.deepEqual(r.media, { tipo: "control", accion: "pausar", segundos: 30 });
+
+  let n = 0;
+  const client = { messages: { async create() {
+    n++;
+    if (n === 1) return { stop_reason: "tool_use", content: [{ type: "tool_use", id: "t1", name: "controlar_reproductor", input: { accion: "detener" } }] };
+    return { stop_reason: "end_turn", content: [{ type: "text", text: "Listo, lo cerré." }] };
+  } } };
+  const out = await runAgent({ sessionId: "media-test", message: "para el video" }, { client, toolset, system: "x" });
+  assert.equal(out.reply, "Listo, lo cerré.");
+  assert.equal(out.media.tipo, "control");
+  assert.equal(out.media.accion, "detener");
+});

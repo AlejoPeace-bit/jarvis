@@ -53,6 +53,13 @@ Pruébalo: *"¿Qué tengo mañana?"*, *"Agéndame visita de obra el martes a las
 - **Voz de respuesta**: en Ajustes puedes elegir la voz del sistema (las "Google español" en Android y las "Mónica/Paulina/Jorge" en Apple suenan bien) y la velocidad.
 - En escritorio, mantén presionada la **barra espaciadora** para hablar.
 
+## Videos y podcasts
+
+- **Podcasts** (sin configurar nada): *"pon el último episodio de La Silla Vacía"*. Usa el buscador de Apple Podcasts y suena dentro de la app.
+- **YouTube**: agrega `YOUTUBE_API_KEY` (Google Cloud → APIs y servicios → Biblioteca → *YouTube Data API v3* → Habilitar; luego Credenciales → Crear credencial → Clave de API). Después: *"ponme una receta de ajiaco"*, *"otro"*, *"pausa"*, *"adelanta un minuto"*, *"cierra el video"*.
+- Mientras algo suena, el modo manos libres no escucha; toca el micrófono para hablarle (pausa lo que suena y lo retoma si no pediste nada del reproductor).
+- En iPhone, Safari no deja arrancar un video de YouTube con sonido sin un toque: toca ▶ en el video. Los podcasts sí arrancan solos.
+
 ## Conectar tus flujos de n8n
 
 Cada flujo con un *Webhook* en n8n puede ser una herramienta. Defínelos en la variable `N8N_FLOWS` (JSON) o en el archivo `/data/flujos.json`:

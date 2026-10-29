@@ -131,7 +131,13 @@
       typing.remove();
       addMsg(data.reply, "bot", { actions: data.actions });
       setState("", "Listo");
-      if (store.voiceOn) speak(data.reply); else maybeAutoListen();
+      const media = data.media || null;
+      // Si pausamos algo para escucharte y no pediste nada nuevo del reproductor, sigue sonando
+      const afterSpeech = media ? () => applyMedia(media) : (pausedForListening ? () => { pausedForListening = false; player.resume(); } : null);
+      if (media) pausedForListening = false;
+      if (store.voiceOn) speak(data.reply, afterSpeech);
+      else if (afterSpeech) afterSpeech();
+      else maybeAutoListen();
     } catch (err) {
       typing.remove();
       addMsg(err.message, "bot", { error: true });
@@ -159,6 +165,7 @@
   // Se llama en cada toque (micrófono, enviar, sugerencias); la respuesta llega después y ya puede sonar.
   let speechUnlocked = false;
   function unlockSpeech() {
+    player.unlock();
     if (!synth || speechUnlocked) return;
     try {
       const u = new SpeechSynthesisUtterance(" ");
@@ -187,8 +194,9 @@
       .replace(/\s+/g, " ")
       .trim();
   }
-  function speak(text) {
-    if (!synth) { maybeAutoListen(); return; }
+  function speak(text, after) {
+    const done = () => { setState("", "Listo"); if (after) after(); else maybeAutoListen(); };
+    if (!synth) { done(); return; }
     synth.cancel();
     const clean = cleanForSpeech(text);
     // Trocear por frases: evita que Chrome corte las locuciones largas
@@ -197,7 +205,7 @@
     let idx = 0;
     setState("speaking", "Hablando…");
     const next = () => {
-      if (idx >= parts.length) { setState("", "Listo"); maybeAutoListen(); return; }
+      if (idx >= parts.length) { done(); return; }
       const u = new SpeechSynthesisUtterance(parts[idx++].trim());
       if (voice) u.voice = voice;
       u.lang = voice?.lang || "es-CO";
@@ -361,6 +369,7 @@
   function startListening() {
     if (listening || busy) return;
     if (synth?.speaking) synth.cancel();
+    if (player.isPlaying()) { player.pause(); pausedForListening = true; }
     if (useServerVoice()) { startRecording(); return; }
     if (!rec) return;
     try { rec.start(); } catch { /* ya estaba iniciado */ }
@@ -371,8 +380,111 @@
     if (rec) { try { rec.stop(); } catch {} }
   }
   function maybeAutoListen() {
+    if (player.isPlaying()) return; // al terminar el video/podcast vuelve a escuchar
     if (store.handsFree && (useServerVoice() || rec) && document.visibilityState === "visible") setTimeout(startListening, 350);
   }
+
+  // ---------- Reproductor: videos de YouTube y podcasts ----------
+  const SILENT_WAV = "data:audio/wav;base64,UklGRpwAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YXgAAACAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIA=";
+  let pausedForListening = false;
+  const player = (() => {
+    const box = $("player"), vidBox = $("playerVideo"), audio = $("playerAudio");
+    let yt = null, ytReady = null, kind = null, audioUnlocked = false;
+
+    function loadYT() {
+      if (ytReady) return ytReady;
+      ytReady = new Promise((resolve) => {
+        window.onYouTubeIframeAPIReady = () => resolve(window.YT);
+        const tag = document.createElement("script");
+        tag.src = "https://www.youtube.com/iframe_api";
+        tag.onerror = () => resolve(null);
+        document.head.appendChild(tag);
+      });
+      return ytReady;
+    }
+    function show(media) {
+      $("playerTitle").textContent = media.titulo || "";
+      $("playerSub").textContent = media.subtitulo || "";
+      const img = $("playerImg");
+      img.hidden = !media.imagen;
+      if (media.imagen) img.src = media.imagen;
+      box.hidden = false;
+    }
+    function stopVideo() { try { yt?.stopVideo(); } catch {} vidBox.hidden = true; }
+    function stopAudio() { audio.pause(); audio.hidden = true; }
+    function ended() { if (!kind) return; kind = null; setState("", "Listo"); maybeAutoListen(); }
+
+    audio.addEventListener("ended", ended);
+
+    return {
+      // iPhone: el audio solo puede sonar solo si antes se "desbloqueó" con un toque
+      unlock() {
+        if (audioUnlocked) return;
+        audioUnlocked = true;
+        try {
+          audio.src = SILENT_WAV;
+          const p = audio.play();
+          if (p) p.then(() => audio.pause()).catch(() => { audioUnlocked = false; });
+        } catch { audioUnlocked = false; }
+      },
+      isPlaying() {
+        if (kind === "audio") return !audio.paused && !audio.ended;
+        if (kind === "youtube") { try { return yt?.getPlayerState() === 1 || yt?.getPlayerState() === 3; } catch { return false; } }
+        return false;
+      },
+      pause() { if (kind === "audio") audio.pause(); else if (kind === "youtube") try { yt.pauseVideo(); } catch {} },
+      resume() {
+        if (kind === "audio") audio.play().catch(() => setState("", "Toca ▶ para continuar"));
+        else if (kind === "youtube") try { yt.playVideo(); } catch {}
+      },
+      seek(delta) {
+        if (kind === "audio") audio.currentTime = Math.max(0, audio.currentTime + delta);
+        else if (kind === "youtube") try { yt.seekTo(Math.max(0, yt.getCurrentTime() + delta), true); } catch {}
+      },
+      close() { stopVideo(); stopAudio(); kind = null; box.hidden = true; },
+      async playYouTube(media) {
+        stopAudio();
+        show(media);
+        vidBox.hidden = false;
+        kind = "youtube";
+        const YT = await loadYT();
+        if (!YT) { $("ytFrame").outerHTML = `<iframe id="ytFrame" src="https://www.youtube-nocookie.com/embed/${encodeURIComponent(media.id)}?autoplay=1&playsinline=1&rel=0" allow="autoplay; encrypted-media; fullscreen" allowfullscreen></iframe>`; return; }
+        if (yt) { yt.loadVideoById(media.id); return; }
+        yt = new YT.Player("ytFrame", {
+          videoId: media.id,
+          playerVars: { autoplay: 1, playsinline: 1, rel: 0, modestbranding: 1 },
+          events: {
+            onReady: (e) => e.target.playVideo(),
+            onStateChange: (e) => { if (e.data === 0) ended(); },
+          },
+        });
+      },
+      playAudio(media) {
+        stopVideo();
+        show(media);
+        audio.hidden = false;
+        kind = "audio";
+        audio.src = media.url;
+        audio.play().catch(() => setState("", "Toca ▶ para reproducir"));
+      },
+    };
+  })();
+
+  function applyMedia(media) {
+    if (!media) return;
+    if (media.tipo === "youtube") player.playYouTube(media);
+    else if (media.tipo === "audio") player.playAudio(media);
+    else if (media.tipo === "control") {
+      const s = media.segundos || 30;
+      if (media.accion === "pausar") player.pause();
+      else if (media.accion === "reanudar") player.resume();
+      else if (media.accion === "detener") { player.close(); maybeAutoListen(); }
+      else if (media.accion === "adelantar") { player.seek(s); player.resume(); }
+      else if (media.accion === "retroceder") { player.seek(-s); player.resume(); }
+    }
+    if (media.tipo === "control" && media.accion === "pausar") maybeAutoListen();
+  }
+  $("btnPlayerClose").addEventListener("click", () => { player.close(); pausedForListening = false; });
 
   // ---------- Eventos ----------
   form.addEventListener("submit", (e) => { e.preventDefault(); unlockSpeech(); send(input.value); });
