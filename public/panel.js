@@ -171,6 +171,20 @@
     try { renderShopping((await api("/api/lista", { accion: "limpiar_hechos" })).lista); } catch {}
   });
 
+  // Videos y podcasts: buscador y accesos rápidos (van a Jarvis como si lo dijeras por voz)
+  $("mediaForm").addEventListener("submit", (e) => {
+    e.preventDefault();
+    const q = $("mediaInput").value.trim();
+    if (!q) return;
+    $("mediaInput").value = "";
+    unlockAudio();
+    send(/podcast|episodio/i.test(q) ? `Pon el podcast ${q}` : `Ponme un video de ${q}`);
+  });
+  $("mediaQuick").addEventListener("click", (e) => {
+    const b = e.target.closest("button[data-q]");
+    if (b) { unlockAudio(); send(b.dataset.q); }
+  });
+
   // ---------- Temporizadores ----------
   let timers = [], rung = new Set();
   const mmss = (ms) => {

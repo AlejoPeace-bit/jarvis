@@ -65,6 +65,19 @@
           <button type="submit">+</button>
         </form>
       </div>
+      <div class="card media-card">
+        <div class="card-title">Videos y podcasts</div>
+        <form id="mediaForm" autocomplete="off">
+          <input id="mediaInput" type="text" placeholder="Receta, podcast, música…" maxlength="120" />
+          <button type="submit">▶</button>
+        </form>
+        <div class="quick" id="mediaQuick">
+          <button type="button" data-q="Ponme un video con una receta fácil para hoy">🍳 Receta</button>
+          <button type="button" data-q="Pon las noticias de hoy en video">📰 Noticias</button>
+          <button type="button" data-q="Pon el último episodio de un podcast de finanzas personales">🎙 Podcast</button>
+          <button type="button" data-q="Pon música tranquila para cocinar">🎵 Música</button>
+        </div>
+      </div>
       <div class="card home" id="homeCard" hidden>
         <div class="card-title">Casa</div>
         <div class="devices" id="devices"></div>
