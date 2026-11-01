@@ -146,3 +146,36 @@ test("medios: la herramienta pasa el video a la app y el texto a Claude", async 
   assert.equal(out.media.tipo, "control");
   assert.equal(out.media.accion, "detener");
 });
+
+test("roles: el panel no tiene correo, memoria ni borrar eventos", async () => {
+  const { buildToolset } = await import("../server/tools/index.js");
+  const panel = buildToolset("panel");
+  for (const n of ["buscar_correos", "leer_correo", "enviar_correo", "eliminar_evento", "recordar", "olvidar"]) assert.ok(!panel.names.includes(n), n);
+  for (const n of ["lista_mercado", "temporizador", "clima", "hora_actual"]) assert.ok(panel.names.includes(n), n);
+  const admin = buildToolset("admin");
+  assert.ok(admin.names.includes("recordar"));
+  assert.equal(panel.role, "panel");
+});
+
+test("lista de mercado: agregar, marcar y limpiar", async () => {
+  const { applyLista } = await import("../server/tools/lista.js");
+  applyLista({ accion: "vaciar" });
+  let r = applyLista({ accion: "agregar", items: ["Leche", "huevos"] });
+  assert.equal(r.items.length, 2);
+  r = applyLista({ accion: "marcar", items: ["leche"] });
+  assert.equal(r.items.find((i) => i.texto === "Leche").hecho, true);
+  r = applyLista({ accion: "limpiar_hechos" });
+  assert.deepEqual(r.items.map((i) => i.texto), ["huevos"]);
+});
+
+test("temporizadores: crear, ver y cancelar", async () => {
+  const { temporizadorTools, readTimers } = await import("../server/tools/temporizador.js");
+  const t = temporizadorTools[0];
+  const r = await t.execute({ accion: "crear", nombre: "arroz", minutos: 12 });
+  assert.match(r.texto, /arroz/);
+  assert.equal(readTimers().length, 1);
+  assert.match(await t.execute({ accion: "ver" }), /arroz: faltan/);
+  const c = await t.execute({ accion: "cancelar", nombre: "arroz" });
+  assert.match(c.texto, /Cancelé 1/);
+  assert.equal(readTimers().length, 0);
+});

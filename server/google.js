@@ -9,6 +9,7 @@ const TOKEN_FILE = path.join(config.dataDir, "google-tokens.json");
 export const SCOPES = [
   "https://www.googleapis.com/auth/calendar.events",
   "https://www.googleapis.com/auth/gmail.modify",
+  "https://www.googleapis.com/auth/spreadsheets.readonly",
 ];
 
 const pendingStates = new Map(); // state -> expiración (anti-CSRF del flujo OAuth)
@@ -76,6 +77,9 @@ export async function handleCallback(code, state) {
 
 export function calendarApi() {
   return google.calendar({ version: "v3", auth: getAuthClient() });
+}
+export function sheetsApi() {
+  return google.sheets({ version: "v4", auth: getAuthClient() });
 }
 export function gmailApi() {
   return google.gmail({ version: "v1", auth: getAuthClient() });

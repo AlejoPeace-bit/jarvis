@@ -60,6 +60,19 @@ Pruébalo: *"¿Qué tengo mañana?"*, *"Agéndame visita de obra el martes a las
 - Mientras algo suena, el modo manos libres no escucha; toca el micrófono para hablarle (pausa lo que suena y lo retoma si no pediste nada del reproductor).
 - En iPhone, Safari no deja arrancar un video de YouTube con sonido sin un toque: toca ▶ en el video. Los podcasts sí arrancan solos.
 
+## Panel de la casa (tablet en la pared)
+
+`https://TU-DOMINIO/panel.html`: hora, clima, agenda de hoy, lista de mercado (tocable), temporizadores, gasto del mes y botones de la casa, con Jarvis dentro. Pensado para una tablet Android con **Fully Kiosk Browser**.
+
+**Seguridad (importante, es una pantalla que ve todo el mundo):**
+- Usa `PANEL_PASSWORD`, nunca la clave principal. Esa clave solo puede: agenda (ver y crear), lista, temporizadores, clima, gasto del mes, casa y medios. **No** lee ni envía correo, **no** borra eventos y **no** toca la memoria permanente. Su conversación va aparte de la del celular.
+- Si se pierde la tablet, cambia `PANEL_PASSWORD` y Deploy: la tablet queda fuera sin afectar tu celular.
+- La palabra de activación corre dentro de la tablet (Picovoice): el micrófono no sale de la casa hasta que dices "Jarvis"; luego el audio va solo a tu servidor y a Whisper.
+
+Variables: `PANEL_PASSWORD` (obligatoria para el panel), `WEATHER_LAT/LON/PLACE`, `FINANCE_SHEET_ID` (gasto del mes; requiere volver a autorizar Google una vez, porque añade permiso de solo lectura a Sheets), `PICOVOICE_ACCESS_KEY` (palabra "Jarvis"; sin ella se usa el orbe para hablar).
+
+**Fully Kiosk recomendado:** URL de inicio `/panel.html`; activar "Autoplay media", "Enable Microphone"; "Keep screen on"; "Screen off schedule" de noche o "Motion detection" para encender la pantalla; PIN de administrador; desactivar barra de direcciones y gestos de salida.
+
 ## Conectar tus flujos de n8n
 
 Cada flujo con un *Webhook* en n8n puede ser una herramienta. Defínelos en la variable `N8N_FLOWS` (JSON) o en el archivo `/data/flujos.json`:

@@ -9,8 +9,13 @@ export function buildSystemPrompt(toolset) {
   const user = config.userName;
   const memoria = notes.read().trim();
 
+  const panel = toolset.role === "panel";
   const capacidades = [];
-  if (toolset.status.google) capacidades.push("agenda de Google Calendar (consultar, crear, eliminar eventos) y Gmail (buscar, leer, enviar)");
+  capacidades.push("clima de la ciudad (clima)");
+  capacidades.push("lista de mercado compartida (lista_mercado) y temporizadores de cocina (temporizador)");
+  if (toolset.status.finanzas) capacidades.push("gasto del mes de la hoja de finanzas (gasto_del_mes)");
+  if (panel) capacidades.push("agenda de Google Calendar (consultar y crear eventos)");
+  else if (toolset.status.google) capacidades.push("agenda de Google Calendar (consultar, crear, eliminar eventos) y Gmail (buscar, leer, enviar)");
   else capacidades.push("(Google aún no está conectado: si piden agenda o correo, explica que falta conectar Google desde /auth/google)");
   if (toolset.status.n8n) capacidades.push("automatizaciones de n8n (ejecutar_flujo)");
   if (toolset.status.homeAssistant) capacidades.push("control de la casa con Home Assistant (casa_estado, casa_controlar)");
@@ -18,9 +23,13 @@ export function buildSystemPrompt(toolset) {
   if (toolset.status.youtube) capacidades.push("poner videos de YouTube en la pantalla de la app (poner_video): recetas, tutoriales, música, noticias");
   else capacidades.push("(YouTube aún no está conectado: si piden un video, di que falta la clave YOUTUBE_API_KEY; los podcasts sí funcionan)");
   capacidades.push("poner podcasts en la app (poner_podcast) y controlar lo que suena: pausar, reanudar, detener, adelantar, retroceder (controlar_reproductor)");
-  capacidades.push("memoria permanente (recordar / olvidar)");
+  if (!panel) capacidades.push("memoria permanente (recordar / olvidar)");
 
-  return `Eres ${name}, el asistente personal de ${user}. Vives en una app propia que ${user} abre en el celular o el computador y con la que habla por voz.
+  const lugar = panel
+    ? `Ahora mismo hablas desde el PANEL DE LA COCINA: una tablet en la pared que ve toda la familia y las visitas. Por eso aquí NO tienes acceso al correo, no borras eventos y no cambias la memoria permanente. Si te lo piden, di con humor que eso se hace desde el celular de ${user}. Cualquiera de la casa puede pedirte cosas; sé igual de amable con todos. El panel ya muestra en pantalla la hora, el clima, la agenda de hoy, la lista de mercado y los temporizadores: cuando cambies la lista o un temporizador, la pantalla se actualiza sola.`
+    : `Vives en una app propia que ${user} abre en el celular o el computador y con la que habla por voz.`;
+
+  return `Eres ${name}, el asistente personal de ${user}. ${lugar}
 
 SOBRE ${user.toUpperCase()}
 ${config.userContext || DEFAULT_CONTEXT}

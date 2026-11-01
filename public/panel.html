@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Panel de la casa</title>
+  <meta name="description" content="Panel de la cocina con Jarvis" />
+  <meta name="theme-color" content="#0b0f14" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <link rel="icon" href="/icons/icon-192.png" />
+  <link rel="stylesheet" href="/panel.css" />
+</head>
+<body>
+  <main class="grid" id="grid">
+    <!-- Columna 1: hora y clima -->
+    <section class="col col-1">
+      <div class="card clock">
+        <div class="time" id="time">--:--</div>
+        <div class="date" id="date">&nbsp;</div>
+      </div>
+      <div class="card weather" id="weather">
+        <div class="w-main">
+          <span class="w-icon" id="wIcon">⛅</span>
+          <div>
+            <div class="w-temp"><span id="wTemp">--</span>°</div>
+            <div class="w-desc" id="wDesc">Cargando clima…</div>
+          </div>
+        </div>
+        <div class="w-row">
+          <span>Hoy <b id="wMax">--</b>° / <b id="wMin">--</b>°</span>
+          <span>🌧 <b id="wRain">--</b>%</span>
+          <span>💧 <b id="wHum">--</b>%</span>
+        </div>
+        <div class="w-row muted"><span>Mañana <b id="wTomorrow">--</b></span></div>
+      </div>
+      <div class="card spend" id="spend" hidden>
+        <div class="card-title">Gasto de <span id="spendMonth"></span></div>
+        <div class="spend-total" id="spendTotal">$0</div>
+        <div class="spend-cats" id="spendCats"></div>
+      </div>
+    </section>
+
+    <!-- Columna 2: agenda y temporizadores -->
+    <section class="col col-2">
+      <div class="card agenda">
+        <div class="card-title">Hoy en la agenda</div>
+        <ul class="list" id="agenda"><li class="muted">Cargando…</li></ul>
+      </div>
+      <div class="card timers" id="timersCard">
+        <div class="card-title">Temporizadores <small class="muted">“Jarvis, pon 12 minutos para el arroz”</small></div>
+        <div class="timers-list" id="timers"><p class="muted empty">Ninguno activo</p></div>
+      </div>
+    </section>
+
+    <!-- Columna 3: lista de mercado y casa -->
+    <section class="col col-3">
+      <div class="card shopping">
+        <div class="card-title">Lista de mercado
+          <button type="button" class="link" id="btnClearDone" title="Quitar los comprados">limpiar</button>
+        </div>
+        <ul class="list check" id="shopping"><li class="muted">Cargando…</li></ul>
+        <form id="shopForm" autocomplete="off">
+          <input id="shopInput" type="text" placeholder="Agregar…" maxlength="80" />
+          <button type="submit">+</button>
+        </form>
+      </div>
+      <div class="card home" id="homeCard" hidden>
+        <div class="card-title">Casa</div>
+        <div class="devices" id="devices"></div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Reproductor (videos / podcasts) -->
+  <section class="player" id="player" hidden>
+    <div class="player-head">
+      <img id="playerImg" alt="" hidden />
+      <div class="player-info"><b id="playerTitle"></b><small id="playerSub"></small></div>
+      <button type="button" class="icon-btn" id="btnPlayerClose" title="Cerrar">✕</button>
+    </div>
+    <div class="player-video" id="playerVideo" hidden><div id="ytFrame"></div></div>
+    <audio id="playerAudio" controls preload="none" hidden></audio>
+  </section>
+
+  <!-- Barra de Jarvis -->
+  <footer class="bar">
+    <button type="button" class="orb-btn" id="btnMic" title="Hablar con Jarvis" aria-pressed="false">
+      <div class="orb" id="orb"><span></span><span></span><span></span></div>
+    </button>
+    <div class="bar-text">
+      <div class="status" id="status">Iniciando…</div>
+      <div class="transcript" id="transcript"></div>
+    </div>
+    <button type="button" class="icon-btn" id="btnSettings" title="Ajustes">⚙</button>
+  </footer>
+
+  <!-- Alarma de temporizador -->
+  <div class="alarm" id="alarm" hidden>
+    <div class="alarm-box">
+      <div class="alarm-title" id="alarmTitle">¡Listo!</div>
+      <button type="button" id="btnAlarmOk">Apagar</button>
+    </div>
+  </div>
+
+  <dialog id="settings">
+    <form method="dialog" class="settings-form">
+      <h2>Panel</h2>
+      <label>Clave del panel
+        <input type="password" id="setKey" placeholder="PANEL_PASSWORD del servidor" />
+      </label>
+      <label class="row"><input type="checkbox" id="setWake" checked /> Activar con la palabra “Jarvis”</label>
+      <label class="row"><input type="checkbox" id="setVoice" checked /> Responder con voz</label>
+      <label>Velocidad <span id="rateLabel">1.0</span>
+        <input type="range" id="setRate" min="0.7" max="1.4" step="0.05" value="1" />
+      </label>
+      <div class="settings-actions">
+        <button type="button" id="btnReset" class="ghost">Nueva conversación</button>
+        <button type="submit" id="btnSaveSettings">Guardar</button>
+      </div>
+      <p class="hint" id="healthInfo"></p>
+    </form>
+  </dialog>
+
+  <script src="/panel.js"></script>
+</body>
+</html>

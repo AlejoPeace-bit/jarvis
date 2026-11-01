@@ -1,4 +1,4 @@
-const CACHE = "jarvis-v4";
+const CACHE = "jarvis-v5";
 const SHELL = ["/", "/index.html", "/styles.css", "/app.js", "/manifest.webmanifest", "/icons/icon-192.png", "/icons/icon-512.png"];
 
 self.addEventListener("install", (e) => {
@@ -15,7 +15,7 @@ self.addEventListener("fetch", (e) => {
   const url = new URL(e.request.url);
   // Solo archivos de la propia app: el audio de podcasts y YouTube van directo a la red
   if (e.request.method !== "GET" || url.origin !== self.location.origin) return;
-  if (url.pathname.startsWith("/api/") || url.pathname.startsWith("/auth/")) return;
+  if (url.pathname.startsWith("/api/") || url.pathname.startsWith("/auth/") || url.pathname.startsWith("/panel")) return;
   // Red primero (para recibir actualizaciones), caché como respaldo sin conexión
   e.respondWith(
     fetch(e.request)

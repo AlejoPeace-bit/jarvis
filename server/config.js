@@ -27,8 +27,9 @@ export const config = {
   dataDir: env.DATA_DIR || path.resolve(process.cwd(), "data"),
   publicUrl: (env.PUBLIC_URL || "").replace(/\/$/, ""),
 
-  // Seguridad de la app
+  // Seguridad de la app: clave principal (celular/PC) y clave del panel de la cocina (permisos limitados)
   password: env.JARVIS_PASSWORD || "",
+  panelPassword: env.PANEL_PASSWORD || "",
 
   // Cerebro
   anthropicApiKey: env.ANTHROPIC_API_KEY || "",
@@ -60,6 +61,15 @@ export const config = {
     openaiKey: env.OPENAI_API_KEY || "",
     model: env.STT_MODEL || "",
   },
+
+  // Clima (Open-Meteo, sin clave). Por defecto Villavicencio.
+  weather: { lat: Number(env.WEATHER_LAT || 4.142), lon: Number(env.WEATHER_LON || -73.6266), lugar: env.WEATHER_PLACE || "Villavicencio" },
+
+  // Hoja de finanzas (Google Sheets) para el gasto del mes. ID = lo que va entre /d/ y /edit en la URL de la hoja.
+  finance: { sheetId: env.FINANCE_SHEET_ID || "", gastosSheet: env.FINANCE_GASTOS_SHEET || "Gastos" },
+
+  // Palabra de activación "Jarvis" en el panel (Picovoice Porcupine, gratis para uso personal: console.picovoice.ai)
+  picovoiceKey: env.PICOVOICE_ACCESS_KEY || "",
 
   // YouTube (búsqueda de videos): clave gratis de la YouTube Data API v3
   youtubeKey: env.YOUTUBE_API_KEY || "",

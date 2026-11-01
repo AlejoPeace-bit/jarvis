@@ -27,6 +27,10 @@ const ACTION_LABELS = {
   recordar: "Guardado en memoria",
   olvidar: "Memoria actualizada",
   hora_actual: "Hora consultada",
+  clima: "Clima",
+  lista_mercado: "Lista de mercado",
+  temporizador: "Temporizador",
+  gasto_del_mes: "Finanzas",
   poner_video: "Video",
   poner_podcast: "Podcast",
   controlar_reproductor: "Reproductor",
@@ -44,9 +48,9 @@ function textOf(content) {
  * Procesa un mensaje del usuario y devuelve la respuesta final.
  * `deps` permite inyectar cliente/herramientas en pruebas.
  */
-export async function runAgent({ sessionId, message }, deps = {}) {
+export async function runAgent({ sessionId, message, role = "admin" }, deps = {}) {
   const client = deps.client || getClient();
-  const toolset = deps.toolset || buildToolset();
+  const toolset = deps.toolset || buildToolset(role);
   const system = deps.system || buildSystemPrompt(toolset);
 
   const history = sessionStore.get(sessionId);

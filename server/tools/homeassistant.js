@@ -1,7 +1,7 @@
 // Control de la casa vía Home Assistant (REST API). Se activa cuando existen HA_URL y HA_TOKEN.
 import { config } from "../config.js";
 
-async function ha(method, endpoint, body) {
+export async function ha(method, endpoint, body) {
   const { url, token } = config.homeAssistant;
   const res = await fetch(`${url}/api${endpoint}`, {
     method,
@@ -77,4 +77,22 @@ export function homeAssistantTools() {
       },
     },
   ];
+}
+
+/** Dispositivos accionables para el panel de la casa (luces, enchufes, ventiladores, clima). */
+export async function panelDevices() {
+  const { url, token } = config.homeAssistant;
+  if (!url || !token) return null;
+  const states = await ha("GET", "/states");
+  const ok = new Set(["light", "switch", "fan", "climate", "input_boolean"]);
+  return states
+    .filter((s) => ok.has(s.entity_id.split(".")[0]) && !s.attributes?.hidden)
+    .map((s) => ({
+      entity_id: s.entity_id,
+      nombre: s.attributes?.friendly_name || s.entity_id,
+      estado: s.state,
+      dominio: s.entity_id.split(".")[0],
+      temperatura: s.attributes?.temperature,
+    }))
+    .sort((a, b) => a.nombre.localeCompare(b.nombre, "es"));
 }
